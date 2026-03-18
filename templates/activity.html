@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Activity Log — Maha E-Seva Kendra{% endblock %}
+{% block page_title %}🕵️ Activity Log{% endblock %}
+
+{% block head %}
+<style>
+  .filter-bar { background:#fff; border-radius:10px; padding:14px 18px; box-shadow:0 2px 8px rgba(0,0,0,.06); margin-bottom:18px; }
+  .filter-bar form { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+  .filter-bar label { font-size:.78rem; display:block; margin-bottom:3px; }
+  .filter-bar input, .filter-bar select { padding:7px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:.85rem; }
+  .filter-bar button { padding:7px 16px; background:#3942b0; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:.85rem; }
+  .filter-bar a.clear { padding:7px 12px; background:#f3f4f6; color:#555; border-radius:6px; text-decoration:none; font-size:.85rem; }
+  .action-badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:.72rem; font-weight:600; }
+  .action-WEB_LOGIN { background:#e8f5e9; color:#2e7d32; }
+  .action-SYNC { background:#e8eaf6; color:#3f3f6e; }
+  .action-ADD, .action-CREATE { background:#e3f2fd; color:#1565c0; }
+  .action-EDIT, .action-UPDATE { background:#fff8e1; color:#f57f17; }
+  .action-DELETE { background:#fde8e8; color:#c62828; }
+  .pagination { display:flex; gap:6px; margin-top:14px; }
+  .pagination a, .pagination span { padding:5px 11px; border-radius:6px; font-size:.83rem; text-decoration:none; background:#f3f4f6; color:#333; }
+  .pagination a:hover { background:#3942b0; color:#fff; }
+  .pagination .current { background:#3942b0; color:#fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+  <form method="GET">
+    <div><label>Search</label><input name="q" value="{{ args.get('q','') }}" placeholder="Username / action detail..."></div>
+    <div>
+      <label>Action</label>
+      <select name="action">
+        <option value="">All Actions</option>
+        {% for act in ['WEB_LOGIN','SYNC','ADD','EDIT','DELETE'] %}
+        <option value="{{ act }}" {% if args.get('action')==act %}selected{% endif %}>{{ act }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Shop</label>
+      <select name="shop">
+        <option value="">All Shops</option>
+        {% for k,v in shops.items() %}
+        <option value="{{ k }}" {% if args.get('shop')==k %}selected{% endif %}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit">🔍 Filter</button>
+    <a href="/activity" class="clear">✕ Clear</a>
+  </form>
+</div>
+
+<p style="font-size:.85rem;color:#777;margin-bottom:10px">{{ total }} records, Page {{ page }} / {{ pages }}</p>
+
+<div class="card" style="padding:0;overflow-x:auto">
+  <table>
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Username</th>
+        <th>Shop</th>
+        <th>Action</th>
+        <th>Detail</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td style="font-size:.78rem;white-space:nowrap;color:#666">{{ log.created_at.strftime('%d %b %Y %H:%M:%S') if log.created_at else '—' }}</td>
+        <td><strong>{{ log.username }}</strong></td>
+        <td style="font-size:.8rem">{{ shops.get(log.shop_id, log.shop_id) }}</td>
+        <td><span class="action-badge action-{{ log.action }}">{{ log.action }}</span></td>
+        <td style="font-size:.82rem;color:#555">{{ log.detail or '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="text-align:center;padding:30px;color:#aaa">No activity found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}<a href="?{{ args|replace('page=' ~ page, '') }}&page={{ page-1 }}">‹ Prev</a>{% endif %}
+  {% for p in range([1, page-2]|max, [pages+1, page+3]|min) %}
+    {% if p == page %}<span class="current">{{ p }}</span>
+    {% else %}<a href="?{{ args|replace('page=' ~ page, '') }}&page={{ p }}">{{ p }}</a>{% endif %}
+  {% endfor %}
+  {% if page < pages %}<a href="?{{ args|replace('page=' ~ page, '') }}&page={{ page+1 }}">Next ›</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

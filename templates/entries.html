@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Entries — Maha E-Seva Kendra{% endblock %}
+{% block page_title %}📋 Customer Entries{% endblock %}
+
+{% block head %}
+<style>
+  .filter-bar { background: #fff; border-radius: 10px; padding: 16px 20px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 20px; }
+  .filter-bar form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .filter-bar .form-group { margin: 0; }
+  .filter-bar label { font-size: 0.78rem; margin-bottom: 3px; }
+  .filter-bar input, .filter-bar select { padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.85rem; background: #fff; }
+  .filter-bar button { padding: 7px 16px; background: #3942b0; color: #fff; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; }
+  .filter-bar a.clear { padding: 7px 12px; background: #f3f4f6; color: #555; border-radius: 6px; text-decoration: none; font-size: 0.85rem; }
+  .count { font-size: 0.85rem; color: #777; margin-bottom: 10px; }
+  .pagination { display: flex; gap: 6px; margin-top: 16px; }
+  .pagination a, .pagination span { padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; text-decoration: none; background: #f3f4f6; color: #333; }
+  .pagination a:hover { background: #3942b0; color: #fff; }
+  .pagination .current { background: #3942b0; color: #fff; }
+  td.small { font-size: 0.8rem; }
+  .status-cell { white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="filter-bar">
+  <form method="GET">
+    <div class="form-group">
+      <label>Search</label>
+      <input name="q" value="{{ args.get('q','') }}" placeholder="Name / Mobile / Ref..." style="width:180px">
+    </div>
+    {% if session.get('shop_id') == 'admin' %}
+    <div class="form-group">
+      <label>Shop</label>
+      <select name="shop">
+        <option value="">All Shops</option>
+        {% for k,v in shops.items() %}{% if k != 'admin' %}
+        <option value="{{ k }}" {% if args.get('shop') == k %}selected{% endif %}>{{ v }}</option>
+        {% endif %}{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div class="form-group">
+      <label>Payment</label>
+      <select name="pay">
+        <option value="">All</option>
+        <option value="Paid" {% if args.get('pay')=='Paid' %}selected{% endif %}>Paid</option>
+        <option value="Not Paid" {% if args.get('pay')=='Not Paid' %}selected{% endif %}>Not Paid</option>
+        <option value="Partial" {% if args.get('pay')=='Partial' %}selected{% endif %}>Partial</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Work Status</label>
+      <select name="work">
+        <option value="">All</option>
+        <option value="Pending" {% if args.get('work')=='Pending' %}selected{% endif %}>Pending</option>
+        <option value="In Progress" {% if args.get('work')=='In Progress' %}selected{% endif %}>In Progress</option>
+        <option value="Completed" {% if args.get('work')=='Completed' %}selected{% endif %}>Completed</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>From Date</label>
+      <input type="date" name="date" value="{{ args.get('date','') }}">
+    </div>
+    <div class="form-group">
+      <label>To Date</label>
+      <input type="date" name="date_to" value="{{ args.get('date_to','') }}">
+    </div>
+    <button type="submit">🔍 Filter</button>
+    <a href="/entries" class="clear">✕ Clear</a>
+  </form>
+</div>
+
+<p class="count">Showing {{ entries|length }} of {{ total }} entries (Page {{ page }} / {{ total_pages }})</p>
+
+<div class="card" style="padding: 0; overflow-x: auto;">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Customer</th>
+        <th>Mobile</th>
+        <th>Service</th>
+        <th>Handled By</th>
+        {% if session.get('shop_id') == 'admin' %}<th>Shop</th>{% endif %}
+        <th>Amount</th>
+        <th>Paid</th>
+        <th>Due</th>
+        <th>Payment</th>
+        <th>Work</th>
+        <th>Expected</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in entries %}
+      <tr>
+        <td class="small text-muted">{{ e.id }}</td>
+        <td><strong>{{ e.customer_name }}</strong>{% if e.remarks %}<br><span class="text-muted" style="font-size:.75rem">{{ e.remarks[:40] }}</span>{% endif %}</td>
+        <td class="small">{{ e.mobile_number or '—' }}</td>
+        <td class="small">{{ e.service_name[:35] }}</td>
+        <td class="small">{{ e.handled_by or '—' }}</td>
+        {% if session.get('shop_id') == 'admin' %}
+        <td><span style="background:#e8eaf6;padding:2px 7px;border-radius:5px;font-size:.75rem">{{ shops.get(e.shop_id, e.shop_id) }}</span></td>
+        {% endif %}
+        <td>₹{{ "%.0f"|format(e.total_amount) }}</td>
+        <td>₹{{ "%.0f"|format(e.amount_paid) }}</td>
+        <td>₹{{ "%.0f"|format(e.pending_amount) }}</td>
+        <td class="status-cell">
+          {% if e.payment_status == 'Paid' %}<span class="badge badge-green">Paid</span>
+          {% elif e.payment_status == 'Partial' %}<span class="badge badge-yellow">Partial</span>
+          {% else %}<span class="badge badge-red">Not Paid</span>{% endif %}
+        </td>
+        <td class="status-cell">
+          {% if e.work_status == 'Completed' %}<span class="badge badge-green">Done</span>
+          {% elif e.work_status == 'In Progress' %}<span class="badge badge-blue">In Progress</span>
+          {% else %}<span class="badge badge-yellow">Pending</span>{% endif %}
+        </td>
+        <td class="small">{{ e.expected_time.strftime('%d %b %y') if e.expected_time else '—' }}</td>
+        <td class="small">{{ e.created_at.strftime('%d %b %y') if e.created_at else '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="14" style="text-align:center;padding:30px;color:#aaa">No entries found.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}<a href="?{{ args|replace('page=' ~ page, '') }}&page={{ page - 1 }}">‹ Prev</a>{% endif %}
+  {% for p in range([1, page-2]|max, [total_pages+1, page+3]|min) %}
+    {% if p == page %}<span class="current">{{ p }}</span>
+    {% else %}<a href="?{{ args|replace('page=' ~ page, '') }}&page={{ p }}">{{ p }}</a>{% endif %}
+  {% endfor %}
+  {% if page < total_pages %}<a href="?{{ args|replace('page=' ~ page, '') }}&page={{ page + 1 }}">Next ›</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}
